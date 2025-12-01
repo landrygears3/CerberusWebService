@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CerberusClassLibrary/CerberusClassLibrary.csproj" Id="7e4b341e-ea9e-4925-8bfc-03517efb713c" />
+  <Project Path="CerberusWebService/CerberusWebService.csproj" />
+</Solution>
