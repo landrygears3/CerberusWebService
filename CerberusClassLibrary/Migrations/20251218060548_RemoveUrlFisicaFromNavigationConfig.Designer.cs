@@ -4,6 +4,7 @@ using CerberusClassLibrary.DataSecure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CerberusClassLibrary.Migrations
 {
     [DbContext(typeof(CerberusDbContext))]
-    partial class CerberusDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251218060548_RemoveUrlFisicaFromNavigationConfig")]
+    partial class RemoveUrlFisicaFromNavigationConfig
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -194,6 +197,11 @@ namespace CerberusClassLibrary.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("titulo");
+
+                    b.Property<string>("URLFisica")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)")
+                        .HasColumnName("URLFisica");
 
                     b.Property<string>("Url")
                         .HasMaxLength(2048)

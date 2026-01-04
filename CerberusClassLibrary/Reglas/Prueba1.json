@@ -1,0 +1,109 @@
+{
+	"name": "333",
+	"attributes": [
+		{
+			"name": "role",
+			"type": "string"
+		},
+		{
+			"name": "department",
+			"type": "string"
+		},
+		{
+			"name": "resourceType",
+			"type": "string"
+		},
+		{
+			"name": "Perfil",
+			"type": "string"
+		}
+	],
+	"decisions": [
+		{
+			"IDPANTALLA": 1,
+			"conditions": {
+				"all": [
+					{
+						"fact": "role",
+						"operator": "equal",
+						"value": "user"
+					},
+					{
+						"fact": "department",
+						"operator": "equal",
+						"value": "sistemas"
+					},
+					{
+						"fact": "resourceType",
+						"operator": "equal",
+						"value": "AdminPage"
+					}
+				]
+			},
+			"event": {
+				"type": "formulario",
+				"params": {
+					"message": "Acceso permitido"
+				}
+			}
+		},
+		{
+			"conditions": {
+				"any": [
+					{
+						"fact": "role",
+						"operator": "equal",
+						"value": "sales"
+					},
+					{
+						"fact": "resourceType",
+						"operator": "equal",
+						"value": "report"
+					}
+				]
+			},
+			"event": {
+				"type": "access",
+				"params": {
+					"message": "Acceso permitido"
+				}
+			}
+		},
+		{
+			"conditions": {
+				"any": [
+					{
+						"all": [
+							{
+								"fact": "role",
+								"operator": "equal",
+								"value": "Guardia"
+							},
+							{
+								"fact": "department",
+								"operator": "equal",
+								"value": "Intramuros"
+							},
+							{
+								"fact": "resourceType",
+								"operator": "equal",
+								"value": "ChekcIn"
+							}
+						]
+					},
+					{
+						"fact": "Perfil",
+						"operator": "equal",
+						"value": "Admin"
+					}
+				]
+			},
+			"event": {
+				"type": "Acceso",
+				"params": {
+					"Response": "AccesoConcedido"
+				}
+			}
+		}
+	]
+}
