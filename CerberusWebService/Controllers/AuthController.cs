@@ -4,6 +4,7 @@ using CerberusClassLibrary.Model.LoginModel.DTO;
 using CerberusClassLibrary.Model.LoginModel.JWT;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -30,7 +31,7 @@ namespace CerberusWebService.Controllers
 
         // POST: api/auth/register
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] CerberusClassLibrary.Model.LoginModel.DTO.RegisterRequest request)
         {
             // Validación básica
             if (request == null ||
@@ -86,7 +87,7 @@ namespace CerberusWebService.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] CerberusClassLibrary.Model.LoginModel.DTO.LoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.UserNameOrNumero) ||
                 string.IsNullOrWhiteSpace(request.Password))
@@ -168,6 +169,39 @@ namespace CerberusWebService.Controllers
             }
 
             return Ok(new { message = "Sesión cerrada." });
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+                return BadRequest(new { message = "RefreshToken es obligatorio." });
+
+            try
+            {
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                var (user, newRefreshToken, newRefreshExpires) =
+                    await _tokenService.RotateRefreshTokenAsync(request.RefreshToken, ip);
+
+                var (accessToken, accessExpires) =
+                    await _tokenService.CreateAccessTokenAsync(user);
+
+                var response = new RefreshTokenResponse
+                {
+                    AccessToken = accessToken,
+                    AccessTokenExpiration = accessExpires,
+                    RefreshToken = newRefreshToken,
+                    RefreshTokenExpiration = newRefreshExpires
+                };
+
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Importante: no des demasiados detalles si no quieres.
+                return Unauthorized(new { message = ex.Message });
+            }
         }
 
     }
