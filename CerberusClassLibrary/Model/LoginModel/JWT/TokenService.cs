@@ -1,6 +1,7 @@
 ﻿using CerberusClassLibrary.DataSecure;
 using CerberusClassLibrary.Interfaz;          // 👈 importante
 using CerberusClassLibrary.Model;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -12,15 +13,17 @@ using System.Text;
 
 namespace CerberusClassLibrary.Model.LoginModel.JWT
 {
-    public class TokenService : ITokenService   // <-- esta ITokenService es la de Interfaz
+    public class TokenService : ITokenService   
     {
         private readonly JwtSettings _jwtSettings;
         private readonly CerberusDbContext _db;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public TokenService(JwtSettings jwtOptions, CerberusDbContext db)
+        public TokenService(JwtSettings jwtSettings, CerberusDbContext db, UserManager<ApplicationUser> userManager)
         {
-            _jwtSettings = jwtOptions;
-            _db = db;
+            _jwtSettings = jwtSettings ?? throw new ArgumentNullException(nameof(jwtSettings));
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
         }
 
         public Task<(string token, DateTime expires)> CreateAccessTokenAsync(ApplicationUser user)
@@ -81,5 +84,73 @@ namespace CerberusClassLibrary.Model.LoginModel.JWT
 
             return (token, expires);
         }
+
+        public async Task RevokeRefreshTokenAsync(string refreshToken, string ipAddress)
+        {
+            var tokenRow = await _db.UserRefreshTokens
+                .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+            if (tokenRow == null)
+                return; // no revelamos si existe o no
+
+            tokenRow.IsActive = false;
+
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task RevokeAllRefreshTokensAsync(string userId, string ipAddress)
+        {
+            var tokens = await _db.UserRefreshTokens
+                .Where(x => x.UserId == userId && x.IsActive)
+                .ToListAsync();
+
+            foreach (var t in tokens)
+                t.IsActive = false;
+
+            await _db.SaveChangesAsync();
+        }
+        public async Task<(ApplicationUser user, string newRefreshToken, DateTime newRefreshExpires)>
+    RotateRefreshTokenAsync(string refreshToken, string ipAddress)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                throw new InvalidOperationException("Refresh token vacío.");
+
+            var now = DateTime.UtcNow;
+
+            var existing = await _db.UserRefreshTokens
+                .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+            if (existing == null)
+                throw new InvalidOperationException("Refresh token inválido.");
+
+            if (!existing.IsActive)
+                throw new InvalidOperationException("Refresh token inactivo.");
+
+            if (existing.ExpiresAt <= now)
+                throw new InvalidOperationException("Refresh token expirado.");
+
+            // Cargar usuario
+            var user = await _userManager.FindByIdAsync(existing.UserId);
+            if (user == null)
+                throw new InvalidOperationException("Usuario no encontrado.");
+
+            // Baja lógica (si ya la agregaste a ApplicationUser)
+            if (!user.IsActive)
+                throw new InvalidOperationException("La cuenta está dada de baja.");
+
+            // ROTACIÓN: desactivar el token anterior
+            existing.IsActive = false;
+
+            // Crear uno nuevo (reusa tu método ya existente)
+            var (newToken, newExpires) = await CreateRefreshTokenAsync(user, ipAddress);
+
+            // Persistir el cambio de IsActive=false del anterior
+            await _db.SaveChangesAsync();
+
+            return (user, newToken, newExpires);
+        }
+
+
+
     }
 }

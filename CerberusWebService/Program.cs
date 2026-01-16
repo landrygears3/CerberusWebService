@@ -4,6 +4,7 @@ using CerberusClassLibrary.Interfaz;
 using CerberusClassLibrary.Model;
 using CerberusClassLibrary.Model.LoginModel;
 using CerberusClassLibrary.Model.LoginModel.JWT;
+using CerberusWebService.BackServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -61,12 +62,14 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 });
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
 // Swagger simple
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 var app = builder.Build();
 
