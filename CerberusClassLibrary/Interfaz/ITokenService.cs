@@ -12,5 +12,9 @@ namespace CerberusClassLibrary.Interfaz
         Task<(string token, DateTime expires)> CreateRefreshTokenAsync(
             ApplicationUser user,
             string ipAddress);
+
+        Task RevokeRefreshTokenAsync(string refreshToken, string ipAddress);
+        Task RevokeAllRefreshTokensAsync(string userId, string ipAddress);
+
     }
 }

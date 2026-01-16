@@ -2,9 +2,11 @@
 using CerberusClassLibrary.Model.LoginModel;
 using CerberusClassLibrary.Model.LoginModel.DTO;
 using CerberusClassLibrary.Model.LoginModel.JWT;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CerberusWebService.Controllers
 {
@@ -138,6 +140,34 @@ namespace CerberusWebService.Controllers
             };
 
             return Ok(response);
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+                return BadRequest(new { message = "RefreshToken es obligatorio." });
+
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+            if (request.LogoutAllDevices)
+            {
+                // userId viene del JWT (sub)
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+
+                if (string.IsNullOrWhiteSpace(userId))
+                    return Unauthorized();
+
+                await _tokenService.RevokeAllRefreshTokensAsync(userId, ip);
+            }
+            else
+            {
+                await _tokenService.RevokeRefreshTokenAsync(request.RefreshToken, ip);
+            }
+
+            return Ok(new { message = "Sesión cerrada." });
         }
 
     }

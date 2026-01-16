@@ -81,5 +81,31 @@ namespace CerberusClassLibrary.Model.LoginModel.JWT
 
             return (token, expires);
         }
+
+        public async Task RevokeRefreshTokenAsync(string refreshToken, string ipAddress)
+        {
+            var tokenRow = await _db.UserRefreshTokens
+                .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+            if (tokenRow == null)
+                return; // no revelamos si existe o no
+
+            tokenRow.IsActive = false;
+
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task RevokeAllRefreshTokensAsync(string userId, string ipAddress)
+        {
+            var tokens = await _db.UserRefreshTokens
+                .Where(x => x.UserId == userId && x.IsActive)
+                .ToListAsync();
+
+            foreach (var t in tokens)
+                t.IsActive = false;
+
+            await _db.SaveChangesAsync();
+        }
+
     }
 }
