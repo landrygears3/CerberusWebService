@@ -76,7 +76,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 var app = builder.Build();
-app.UsePathBase("/Apis");
+app.UsePathBase("/Seguridad");
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
