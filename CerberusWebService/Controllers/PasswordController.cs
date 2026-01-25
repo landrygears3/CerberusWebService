@@ -98,6 +98,45 @@ namespace CerberusWebService.Controllers
         }
 
         // POST: api/password/reset-password
+        [HttpPost("validate-token")]
+        public async Task<IActionResult> ValidateResetToken([FromBody] ValidationTokenRequest request)
+        {
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Token))
+            {
+                return BadRequest(new ValidationTokenResponse { Message = "Email y token son obligatorios." });
+            }
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                // No revelar existencia; devolver mensaje genérico
+                return BadRequest(new ValidationTokenResponse { Message = "Token inválido." });
+            }
+            // Decodificar token Base64Url
+            string token;
+            try
+            {
+                var tokenBytes = WebEncoders.Base64UrlDecode(request.Token);
+                token = Encoding.UTF8.GetString(tokenBytes);
+            }
+            catch
+            {
+                return BadRequest(new ValidationTokenResponse { Message = "Token inválido." });
+            }
+            var isValid = await _userManager.VerifyUserTokenAsync(
+                user,
+                _userManager.Options.Tokens.PasswordResetTokenProvider,
+                "ResetPassword",
+                token);
+            if (!isValid)
+            {
+                return BadRequest(new ValidationTokenResponse { Message = "Token inválido." });
+            }
+            return Ok(new ValidationTokenResponse { Message = "Token válido." ,IsValid = true});
+        }
+
+        // POST: api/password/reset-password
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
