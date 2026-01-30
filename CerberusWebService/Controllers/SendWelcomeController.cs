@@ -1,5 +1,6 @@
 ﻿using CerberusClassLibrary.Controller.LoginController;
 using CerberusClassLibrary.Interfaz;
+using CerberusClassLibrary.Model;
 using CerberusClassLibrary.Model.Mail;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,8 +20,9 @@ namespace CerberusWebService.Controllers
         }
 
         [HttpPost("enviar-bienvenida")]
-        public async Task<IActionResult> EnviaMailBienvenida([FromBody] MailBienvenidaRequest request)
+        public async Task<ResponseModel<string>> EnviaMailBienvenida([FromBody] MailBienvenidaRequest request)
         {
+            ResponseModel<string> response = new ResponseModel<string>();
             try
             {
                 EmailConfigs formatemail = _emailTemplateEngine.getEmailConfig("Welcome", request.ToEmail);
@@ -39,13 +41,20 @@ namespace CerberusWebService.Controllers
                 };
 
                 await _emailService.SendAsync(mailConfig);
-                return Ok("Correo de bienvenida enviado exitosamente.");
+                response.IsSuccess = true;
+                response.Message = "Correo de bienvenida enviado exitosamente.";
+                response.Code = 200;
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error al enviar el correo de bienvenida: {ex.Message}");
+                response.Message = "Error al enviar el correo de bienvenida.";
+                response.IsSuccess = false;
+                response.Desc = ex.Message;
+                response.Code = 500;
 
             }
+
+            return response;
         }
     }
 }
