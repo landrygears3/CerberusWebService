@@ -232,7 +232,7 @@ namespace CerberusWebService.Controllers
                         response.Data = null;
                     }
 
-                    if (string.IsNullOrEmpty(token))
+                    if (!string.IsNullOrEmpty(token))
                     {
                         var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
                         if (!result.Succeeded)
@@ -249,6 +249,15 @@ namespace CerberusWebService.Controllers
                             response.Message = "Contraseña restablecida correctamente.";
                             response.Data = null;
                         }
+                        
+                    }
+                    else
+                    {
+                        // No revelar existencia; devolver mensaje genérico
+                        response.Code = 400;
+                        response.Message = "No se pudo obtener token";
+                        response.Data = null;
+                        response.IsSuccess = false;
                         
                     }
                    

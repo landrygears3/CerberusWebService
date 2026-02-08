@@ -85,6 +85,9 @@ namespace CerberusWebService.Controllers
                     }
                     else
                     {
+                        response.Code = 200;
+                        response.Message = "Usuario dado de alta de manera correcta";
+                        response.IsSuccess = true;
                         response.Data = new RegisterResponse
                         {
                             UserId = user.Id,
