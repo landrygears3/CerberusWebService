@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Recuperación de contraseña</title>
+</head>
+<body style="margin:0; padding:0; font-family: Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000A3C; padding:24px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF; border-radius:12px; overflow:hidden;">
+          <tr>
+            <td style="padding:24px; text-align:center;">
+              <img src="cid:logo" alt="Logo" width="140" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 24px 24px 24px;">
+              <h1 style="margin:0 0 12px 0;">Hola {{Nombre}}</h1>
+              <p style="margin:0 0 16px 0; color:#333;">
+                Recibimos una solicitud para recuperar la tu contraseña:
+              </p>
+
+              <p style="margin:0;">
+                <a href="{{ConfirmUrl}}"
+                   style="display:inline-block; padding:12px 18px; background:#1372E0; color:#fff; text-decoration:none; border-radius:10px;">
+                  Recuperar contraseña
+                </a>
+              </p>
+
+              <p style="margin:18px 0 0 0; color:#666; font-size:12px;">
+                Si tú no solicitaste esto, ignora este mensaje.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px; background:#FFFFFF; color:#666; font-size:12px;">
+              © {{Year}} Sistema de seguridad Cerberus
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

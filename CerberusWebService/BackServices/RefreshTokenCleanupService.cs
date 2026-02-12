@@ -45,7 +45,7 @@ namespace CerberusWebService.BackServices
                     _logger.LogError(ex, "RefreshTokenCleanup falló");
                 }
 
-                await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
             }
 
         }

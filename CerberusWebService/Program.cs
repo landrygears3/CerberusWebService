@@ -17,17 +17,21 @@ var builder = WebApplication.CreateBuilder(args);
 var jwtSettings = new JwtSettings();
 builder.Configuration.GetSection("JwtSettings").Bind(jwtSettings);
 builder.Services.AddSingleton(jwtSettings);
-
+var smtpSettings = new SmtpSettings();
+builder.Configuration.GetSection("Smtp").Bind(smtpSettings);
+builder.Services.AddSingleton(smtpSettings);
 
 // ===== Servicios propios =====
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<INumeroUsuarioService, NumeroUsuarioService>();
-
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<EmailTemplateEngine>();
 // ===== DbContext =====
 builder.Services.AddDbContext<CerberusDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddSingleton(new ConnectionStringProvider(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ===== Identity =====
 builder.Services
@@ -72,7 +76,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 var app = builder.Build();
-
+app.UsePathBase("/Seguridad");
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();

@@ -1,4 +1,5 @@
 ﻿using CerberusClassLibrary.Interfaz;
+using CerberusClassLibrary.Model;
 using CerberusClassLibrary.Model.LoginModel;
 using CerberusClassLibrary.Model.LoginModel.DTO;
 using CerberusClassLibrary.Model.LoginModel.JWT;
@@ -31,68 +32,88 @@ namespace CerberusWebService.Controllers
 
         // POST: api/auth/register
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] CerberusClassLibrary.Model.LoginModel.DTO.RegisterRequest request)
+        public async Task<ResponseModel<RegisterResponse>> Register([FromBody] CerberusClassLibrary.Model.LoginModel.DTO.RegisterRequest request)
         {
+
+            ResponseModel<RegisterResponse> response = new ResponseModel<RegisterResponse>();
             // Validación básica
             if (request == null ||
                 string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest(new { message = "Email y contraseña son obligatorios." });
+                response.Code = 400;
+                response.IsSuccess = false;
+                response.Message = "Email y contraseña son obligatorios.";
             }
-
-            // Revisar si el correo ya existe
-            var existing = await _userManager.FindByEmailAsync(request.Email);
-            if (existing != null)
+            else
             {
-                return BadRequest(new { message = "El correo ya está registrado." });
-            }
 
-            // Generar NumeroUsuario: CER00001, CER00002, ...
-            var numeroUsuario = await _numeroUsuarioService.GenerateNextAsync();
-
-            var user = new ApplicationUser
-            {
-                UserName = request.Email,
-                Email = request.Email,
-                PhoneNumber = request.Telefono,
-                NumeroUsuario = numeroUsuario,
-                IsActive = true,
-                FechaBaja = null,
-                MotivoBaja = null,
-                UsuarioBajaId = null
-            };
-
-            // Crear usuario con Identity (hash de password incluido)
-            var result = await _userManager.CreateAsync(user, request.Password);
-
-            if (!result.Succeeded)
-            {
-                var errors = result.Errors.Select(e => e.Description);
-                return BadRequest(new
+                // Revisar si el correo ya existe
+                var existing = await _userManager.FindByEmailAsync(request.Email);
+                if (existing != null)
                 {
-                    message = "Error al crear el usuario.",
-                    errors
-                });
+                    response.Code = 400;
+                    response.IsSuccess = false;
+                    response.Message = "El correo ya está registrado.";
+                }
+                else
+                {
+                    var numeroUsuario = await _numeroUsuarioService.GenerateNextAsync();
+
+                    var user = new ApplicationUser
+                    {
+                        UserName = request.Email,
+                        Email = request.Email,
+                        PhoneNumber = request.Telefono,
+                        NumeroUsuario = numeroUsuario,
+                        IsActive = true,
+                        FechaBaja = null,
+                        MotivoBaja = null,
+                        UsuarioBajaId = null
+                    };
+
+                    // Crear usuario con Identity (hash de password incluido)
+                    var result = await _userManager.CreateAsync(user, request.Password);
+
+                    if (!result.Succeeded)
+                    {
+                        var errors = result.Errors.Select(e => e.Description);
+                        response.Code = 400;
+                        response.IsSuccess = false;
+                        response.Message = "Error al crear el usuario.";
+                        response.Desc = string.Join("; ", errors);
+                    }
+                    else
+                    {
+                        response.Code = 200;
+                        response.Message = "Usuario dado de alta de manera correcta";
+                        response.IsSuccess = true;
+                        response.Data = new RegisterResponse
+                        {
+                            UserId = user.Id,
+                            NumeroUsuario = user.NumeroUsuario,
+                            Email = user.Email!
+                        };
+                    }
+                       
+                }
+                    // Generar NumeroUsuario: CER00001, CER00002, ...
+               
             }
 
-            var response = new RegisterResponse
-            {
-                UserId = user.Id,
-                NumeroUsuario = user.NumeroUsuario,
-                Email = user.Email!
-            };
-
-            return Ok(response);
+                return response;
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] CerberusClassLibrary.Model.LoginModel.DTO.LoginRequest request)
+        public async Task<ResponseModel<LoginResponse>> Login([FromBody] CerberusClassLibrary.Model.LoginModel.DTO.LoginRequest request)
         {
+            ResponseModel<LoginResponse> response = new ResponseModel<LoginResponse>();
             if (string.IsNullOrWhiteSpace(request.UserNameOrNumero) ||
                 string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest(new { message = "Usuario y contraseña son obligatorios." });
+                response.Message = "Usuario y contraseña son obligatorios.";
+                response.IsSuccess = false;
+                response.Code = 400;
             }
 
             // Buscar usuario por email o numeroUsuario
@@ -105,103 +126,161 @@ namespace CerberusWebService.Controllers
                        .FirstOrDefaultAsync(x => x.NumeroUsuario == request.UserNameOrNumero);
 
             if (user == null)
-                return Unauthorized(new { message = "Usuario o contraseña incorrectos." });
-
-            // Checar baja lógica
-            if (!user.IsActive)
-                return Unauthorized(new { message = "La cuenta está inactiva." });
-
-            // Validar contraseña
-            var valid = await _userManager.CheckPasswordAsync(user, request.Password);
-            if (!valid)
-                return Unauthorized(new { message = "Usuario o contraseña incorrectos." });
-
-            // IP del cliente
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-
-            // Access token
-            (string accessToken, DateTime accessExpires) =
-                await _tokenService.CreateAccessTokenAsync(user);
-
-            // Refresh token
-            (string refreshToken, DateTime refreshExpires) =
-                await _tokenService.CreateRefreshTokenAsync(user, ip);
-
-
-            var response = new LoginResponse
             {
-                UserId = user.Id,
-                NumeroUsuario = user.NumeroUsuario,
-                Email = user.Email!,
-                AccessToken = accessToken,
-                AccessTokenExpiration = accessExpires,
-                RefreshToken = refreshToken,
-                RefreshTokenExpiration = refreshExpires
-            };
+                response.Message = "Usuario o contraseña incorrectos.";
+                response.IsSuccess = false;
+                response.Code = 401;
+            }
+            else
+            {
 
-            return Ok(response);
+
+                // Checar baja lógica
+                if (!user.IsActive)
+                {
+                    response.IsSuccess = false;
+                    response.Message = "La cuenta está inactiva.";
+                    response.Code = 401;
+                }
+                else
+                {
+                    // Validar contraseña
+                    var valid = await _userManager.CheckPasswordAsync(user, request.Password);
+                    if (!valid)
+                    {
+                        response.IsSuccess = false;
+                        response.Message = "Usuario o contraseña incorrectos.";
+                        response.Code = 401;
+                    }
+                    else
+                    {
+
+                        // IP del cliente
+                        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+
+                        // Access token
+                        (string accessToken, DateTime accessExpires) =
+                            await _tokenService.CreateAccessTokenAsync(user);
+
+                        // Refresh token
+                        (string refreshToken, DateTime refreshExpires) =
+                            await _tokenService.CreateRefreshTokenAsync(user, ip);
+
+
+                        response.Data = new LoginResponse
+                        {
+                            UserId = user.Id,
+                            NumeroUsuario = user.NumeroUsuario,
+                            Email = user.Email!,
+                            AccessToken = accessToken,
+                            AccessTokenExpiration = accessExpires,
+                            RefreshToken = refreshToken,
+                            RefreshTokenExpiration = refreshExpires
+                        };
+                        response.IsSuccess = true;
+                        response.Code = 200;
+                        response.Message = "Inicio de sesión exitoso.";
+                    }
+                }
+            }
+                return response;
         }
 
         [HttpPost("logout")]
         [Authorize]
-        public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+        public async Task<ResponseModel<string>> Logout([FromBody] LogoutRequest request)
         {
+            ResponseModel<string> response = new ResponseModel<string>();
             if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
-                return BadRequest(new { message = "RefreshToken es obligatorio." });
-
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-            if (request.LogoutAllDevices)
             {
-                // userId viene del JWT (sub)
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                             ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
-
-                if (string.IsNullOrWhiteSpace(userId))
-                    return Unauthorized();
-
-                await _tokenService.RevokeAllRefreshTokensAsync(userId, ip);
+                response.Code = 400;
+                response.IsSuccess = false;
+                response.Message = "RefreshToken es obligatorio.";
             }
             else
             {
-                await _tokenService.RevokeRefreshTokenAsync(request.RefreshToken, ip);
+                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                if (request.LogoutAllDevices)
+                {
+                    // userId viene del JWT (sub)
+                    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                                 ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+
+                    if (string.IsNullOrWhiteSpace(userId))
+                    {
+                        response.Code = 401;
+                        response.IsSuccess = false;
+                        response.Message = "No autorizado.";
+                    }
+                    else
+                    {
+                        await _tokenService.RevokeAllRefreshTokensAsync(userId, ip);
+                    }
+                        
+                }
+                else
+                {
+                    await _tokenService.RevokeRefreshTokenAsync(request.RefreshToken, ip);
+                }
+
+                response.Message = "Sesión cerrada.";
+                response.IsSuccess = true;
+                response.Code = 200;
+
             }
 
-            return Ok(new { message = "Sesión cerrada." });
+
+            return response;
         }
 
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+        public async Task<ResponseModel<RefreshTokenResponse>> Refresh([FromBody] RefreshRequest request)
         {
+            ResponseModel<RefreshTokenResponse> response = new ResponseModel<RefreshTokenResponse>();
             if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
-                return BadRequest(new { message = "RefreshToken es obligatorio." });
-
-            try
             {
-                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-                var (user, newRefreshToken, newRefreshExpires) =
-                    await _tokenService.RotateRefreshTokenAsync(request.RefreshToken, ip);
-
-                var (accessToken, accessExpires) =
-                    await _tokenService.CreateAccessTokenAsync(user);
-
-                var response = new RefreshTokenResponse
+                response.Message = "RefreshToken es obligatorio.";
+                response.IsSuccess = false;
+                response.Code = 400;
+            }
+            else
+            {
+                try
                 {
-                    AccessToken = accessToken,
-                    AccessTokenExpiration = accessExpires,
-                    RefreshToken = newRefreshToken,
-                    RefreshTokenExpiration = newRefreshExpires
-                };
+                    var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-                return Ok(response);
+                    var (user, newRefreshToken, newRefreshExpires) =
+                        await _tokenService.RotateRefreshTokenAsync(request.RefreshToken, ip);
+
+                    var (accessToken, accessExpires) =
+                        await _tokenService.CreateAccessTokenAsync(user);
+
+                    response.Data = new RefreshTokenResponse
+                    {
+                        AccessToken = accessToken,
+                        AccessTokenExpiration = accessExpires,
+                        RefreshToken = newRefreshToken,
+                        RefreshTokenExpiration = newRefreshExpires
+                    };
+                    response.IsSuccess = true;
+                    response.Code = 200;
+                    response.Message = "Token renovado correctamente.";
+                }
+                catch (InvalidOperationException ex)
+                {
+                    // Importante: no des demasiados detalles si no quieres.
+                    response.Message = "No fue posible actualizar el token";
+                    response.Code = 401;
+                    response.Desc = ex.Message;
+                    response.IsSuccess = false;
+                }
             }
-            catch (InvalidOperationException ex)
-            {
-                // Importante: no des demasiados detalles si no quieres.
-                return Unauthorized(new { message = ex.Message });
-            }
+
+               
+
+            return response;
         }
 
     }
