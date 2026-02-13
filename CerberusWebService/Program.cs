@@ -1,4 +1,5 @@
-﻿using CerberusClassLibrary.Controller.LoginController;
+﻿using CerberusClassLibrary.Controller.Abac;
+using CerberusClassLibrary.Controller.LoginController;
 using CerberusClassLibrary.DataSecure;
 using CerberusClassLibrary.Interfaz;
 using CerberusClassLibrary.Model;
@@ -26,6 +27,12 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<INumeroUsuarioService, NumeroUsuarioService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<EmailTemplateEngine>();
+builder.Services.AddScoped<AbacCommitService>(sp =>
+{
+    var cfg = sp.GetRequiredService<IConfiguration>();
+    var cs = cfg.GetConnectionString("DefaultConnection")!;
+    return new AbacCommitService(cs);
+});
 // ===== DbContext =====
 builder.Services.AddDbContext<CerberusDbContext>(options =>
 {
