@@ -283,5 +283,60 @@ namespace CerberusWebService.Controllers
             return response;
         }
 
+        [HttpPost("validate-password")]
+        [Authorize]
+        public async Task<ResponseModel<bool>> ValidatePassword(
+    [FromBody] ValidatePasswordRequest request)
+        {
+            var response = new ResponseModel<bool>();
+
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.NumeroUsuario) ||
+                string.IsNullOrWhiteSpace(request.Password))
+            {
+                response.Code = 400;
+                response.IsSuccess = false;
+                response.Message = "NumeroUsuario y Password son obligatorios.";
+                response.Data = false;
+
+                return response;
+            }
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(x => x.NumeroUsuario == request.NumeroUsuario);
+
+            if (user == null)
+            {
+                response.Code = 404;
+                response.IsSuccess = false;
+                response.Message = "Usuario no encontrado.";
+                response.Data = false;
+
+                return response;
+            }
+
+            if (!user.IsActive)
+            {
+                response.Code = 401;
+                response.IsSuccess = false;
+                response.Message = "La cuenta está inactiva.";
+                response.Data = false;
+
+                return response;
+            }
+
+            var valid = await _userManager.CheckPasswordAsync(user, request.Password);
+
+            response.Code = 200;
+            response.IsSuccess = true;
+            response.Message = valid
+                ? "Credenciales válidas."
+                : "Contraseña incorrecta.";
+
+            response.Data = valid;
+
+            return response;
+        }
+
     }
 }
