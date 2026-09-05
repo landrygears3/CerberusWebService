@@ -33,6 +33,18 @@ builder.Services.AddScoped<AbacCommitService>(sp =>
     var cs = cfg.GetConnectionString("DefaultConnection")!;
     return new AbacCommitService(cs);
 });
+builder.Services.AddScoped<AbacDestinatariosFunctions>(sp =>
+{
+    var cfg =
+        sp.GetRequiredService<IConfiguration>();
+
+    var cs =
+        cfg.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "No se encontró la cadena de conexión DefaultConnection.");
+
+    return new AbacDestinatariosFunctions(cs);
+});
 // ===== DbContext =====
 builder.Services.AddDbContext<CerberusDbContext>(options =>
 {
